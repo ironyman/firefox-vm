@@ -35,8 +35,8 @@ chown $original_user:$original_user $KEY $KEY.pub
 
 MOUNTPOINT=$(mktemp -d)
 
-sudo mount $ROOT $MOUNTPOINT
-sudo debootstrap --include=firefox,openssh-server,xauth --components=main bionic $MOUNTPOINT
+mount $ROOT $MOUNTPOINT
+debootstrap --include=firefox,openssh-server,xauth --variant=minbase --components=main bionic $MOUNTPOINT
 
 cp $DIR/$KEY.pub $MOUNTPOINT/
 mkdir -p $MOUNTPOINT/lib/modules/
