@@ -8,6 +8,7 @@ if [[ ! -f $ROOT ]]; then
 fi
 
 if [[ ! -f $PID_FILE ]]; then
+    echo Need root to start qemu.
     sudo setsid qemu-system-x86_64 \
         -drive file=${ROOT},format=raw \
         -kernel /boot/vmlinuz-`uname -r` \
