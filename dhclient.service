@@ -1,0 +1,11 @@
+[Unit]
+Description=dhclient
+#After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c '/sbin/modprobe virtio-net; /sbin/dhclient -v -w'
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

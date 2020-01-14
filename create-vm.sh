@@ -1,42 +1,49 @@
 #!/bin/bash
 
-DISK=3G
-MEMORY=2G
-CPU=4
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-truncate root.img --size ${DISK:-3G}
-mkfs.ext4 root.img -L ROOT
+. $DIR/config.sh
 
-export MOUNTPOINT=$(mktemp -d)
-mount root.img $MOUNTPOINT
-debootstrap --include=firefox,openssh-server,xauth --components=main,universe bionic $MOUNTPOINT
-cat <<"EOF" | bash
-chroot $MOUNTPOINT
-useradd -m user
-passwd -d user
-echo LABEL=ROOT / ext4 rw 0 1 > /etc/fstab
-echo "user   ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+if [[ $EUID -ne 0 ]]; then
+    exec sudo /bin/bash $0 $@ --original-user $UID
+fi
 
-cat<<"EOF2" > /etc/systemd/system/dhclient.service
-[Unit]
-Description=dhclient
-#After=network.target
+options=$(getopt -o ''  --long original-user: -- "$@")
+eval set -- "$options"
+while true; do
+    case "$1" in
+    --original-user)
+        shift
+        original_user=$1
+        echo Original user was $1
+        break
+        ;;
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
 
-[Service]
-Type=simple
-ExecStart=/bin/bash -c 'modprobe virtio-net; while [[ ! $( ip l | grep -e "^2:") ]]; do sleep 1; done; /sbin/dhclient -v -w'
-StandardOutput=journal
+truncate $ROOT  --size ${DISK:-3G}
+chown $original_user:$original_user $ROOT
+mkfs.ext4 $ROOT -L ROOT
 
-[Install]
-WantedBy=multi-user.target
-EOF2
-systemctl enable dhclient
+ssh-keygen -f $KEY -q -N ''
+chown $original_user:$original_user $KEY $KEY.pub
 
-EOF
+MOUNTPOINT=$(mktemp -d)
 
-# apt doesn't find it for some reason
-# sudo apt-get -o Dir=$MOUNTPOINT update
-# sudo apt-get -o Dir=$MOUNTPOINT install linux-modules-`uname -r`
-mkdir $MOUNTPOINT/lib/modules/
+sudo mount $ROOT $MOUNTPOINT
+sudo debootstrap --include=firefox,openssh-server,xauth --components=main bionic $MOUNTPOINT
+
+cp $DIR/$KEY.pub $MOUNTPOINT/
+mkdir -p $MOUNTPOINT/lib/modules/
 cp /lib/modules/`uname -r` $MOUNTPOINT/lib/modules/ -r
+cp $DIR/dhclient.service $MOUNTPOINT/etc/systemd/system/dhclient.service
+cp $DIR/setup-guest.sh $MOUNTPOINT/
+
+chroot $MOUNTPOINT /setup-guest.sh
+
 umount $MOUNTPOINT

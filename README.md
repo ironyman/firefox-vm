@@ -1,31 +1,22 @@
 # Prerequisites
-
+Requires ubuntu. 
 ```
-apt install -y e2fsprogs coreutils debootstrap qemu-system-x86
-```
-
-
-# Create vm
-```
-sudo ./create-vm.sh
-
+apt install -y e2fsprogs coreutils debootstrap qemu-system-x86 openssh-client sudo
 ```
 
-# Run firefox
-Start vm
+# Start firefox in vm
+This will setup vm if not done yet. It will request root via sudo to do things
+like mount and debootstrap and chroot.
 ```
-qemu-system-x86_64 \
-    -drive file=root.img,format=raw \
-    -kernel /boot/vmlinuz-`uname -r` \
-    -initrd  /boot/initrd.img-`uname -r` \
-    -append "root=/dev/sda rdinit=/sbin/init console=tty1,115200 console=ttyS0,115200" \
-    -m $MEMORY \
-    -smp ${CPU:-1} \
-    -machine ubuntu,accel=kvm \
-    -nographic \
-    -device virtio-net,netdev=vmnic -netdev user,id=vmnic,hostfwd=tcp::5555-:22
+./firefox-vm.sh
 ```
-Run firefox
+
+Repeated invocations of firefox-vm.sh will reuse running vm. To stop vm
 ```
-ssh user@localhost -p5555 -Y firefox
+./stop-firefox-vm.sh
+```
+
+To remove vm
+```
+git clean -x -d -f
 ```
